@@ -21,54 +21,16 @@
 /*!
  * @author 2B键盘
  */
-#include <iostream>
-#include <string>
+#include "commands.h"
+
 #include <map>
+#include <iostream>
+#include <cstring>
+#include <sstream>
+#include <vector>
+#include <utility>
 
-typedef char* __param;
-typedef void (*__command)(__param);
-
-/*!
- * 安装所有当前文件夹下的包
- */
-#define ALL "-a"
-typedef void (*install_all_p)(__param);
-install_all_p all = NULL;
-
-/*!
- * 安装指定环境
- * <code>
- *     // 单个安装包
- *     installer --pack=java --v=1.8
- *
- *     // 多个安装包
- *     installer --pack=java;python; --v=1.8;3.1
- * </code>
- */
-#define PACKAGE "--pack"
-typedef void (*install_package_p)(__param);
-install_package_p package = NULL;
-
-/*!
- * 安装指定版本（需要配合 --pack 使用）
- */
-#define FOR_VERSION "--fv"
-typedef void (*install_package_for_version_p)(__param);
-install_package_for_version_p package_for_version = NULL;
-
-/*!
- * 解析所有预编写好的文本，并全部安装
- */
-#define PRE_TEXT "-pre"
-typedef void (*install_pre_text_p)(__param);
-install_pre_text_p pre_text = NULL;
-
-/*!
- * 获取当前版本号
- */
-#define VERSION "-v"
-typedef void (*install_version_p)(__param);
-install_version_p version = NULL;
+typedef void (*__function__)(__argc__, __argv__);
 
 using namespace std;
 
@@ -81,26 +43,112 @@ struct env
     string version;
 };
 
-map<const char*, __command> functions;
+static map<string, __function__> commands;
 
 /**
  * 初始化命令函数
  */
 void init_commands_function();
 
-int main(int argc, char** argv)
+/**
+ * @return 字符串前缀
+ */
+bool start_with(string src, string val);
+
+/**
+ * 解析命令
+ *
+ * @param item    命令字符串
+ * @param command 解析后的命令字符串，例如：--pack=java, 那么这个值就是 --pack
+ * @return 如果是带有参数的命令，那么就解析参数并 return 掉参数。
+ */
+void parse_command(string item, string& command, __argc__& argc, __argv__& argv);
+
+/**
+ * 字符串分割
+ */
+string* split(const string& value, char flag, int& size);
+
+int main(int argc, char **argv)
 {
-    if(argc <= 1)
+    if (argc <= 1)
         return 0;
 
     // 初始化命令
     init_commands_function();
+
+    string item;
+    for (size_t i = 1; i < argc; i++)
+    {
+        item = argv[i];
+
+        string command;
+        __argc__ _argc;
+        __argv__ _argv;
+
+        parse_command(item, command, _argc, _argv);
+
+        if(commands[command] != NULL)
+        {
+            commands[command](_argc, _argv);
+        }
+    }
 
     return 0;
 }
 
 void init_commands_function()
 {
-    version = [](__param){ printf("current version: 1.0\n"); };
-    functions.insert(pair<const char*, __command>("v", version));
+    commands.insert(pair<string, __function__>(VERSION, version));
+    commands.insert(pair<string, __function__>(PACKAGE, package_for_version));
+}
+
+bool start_with(string src, string val)
+{
+    return !src.compare(0, val.size(), val);
+}
+
+void parse_command(string item, string& command, __argc__& argc, __argv__& argv)
+{
+    if(start_with(item, "-"))
+    {
+        if(start_with(item, "--"))
+        {
+            if(strstr(item.c_str(), "="))
+            {
+                int find_index = item.find('=');
+                command = item.substr(0, find_index);
+
+                string value;
+                value = item.substr(find_index + 1, item.size());
+
+                argv = split(value, ';', argc);
+                return;
+            }else
+            {
+                goto defend;
+            }
+            return;
+        }
+
+defend:
+        command   = item;
+        argc      = 0;
+        argv      = __empty__;
+    }
+}
+
+string* split(const string& value, char flag, int& size)
+{
+    string temp;
+    vector<string> vec;
+    istringstream iss(value);
+
+    while(getline(iss, temp, flag))
+    {
+        vec.push_back(temp);
+    }
+
+    size = vec.size();
+    return vec.data();
 }
