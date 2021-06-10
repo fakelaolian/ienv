@@ -24,7 +24,16 @@
 #pragma once
 
 #include <cstdio>
+#include <cstring>
 #include <string>
+#include <iostream>
+#include <map>
+#include <stdio.h>
+#include <io.h>
+
+#ifdef WIN32
+#   include <windows.h>
+#endif
 
 /*!
  * 安装所有当前文件夹下的包
@@ -35,23 +44,13 @@
  * 安装指定环境
  * <code>
  *     // 单个安装包
- *     installer --pack=java --v=1.8
+ *     ienv --pack=java=1.8;
  *
  *     // 多个安装包
- *     installer --pack=java;python; --v=1.8;3.1
+ *     ienv --pack=java=11;python=3.1
  * </code>
  */
 #define PACKAGE "--pack"
-
-/*!
- * 安装指定版本（需要配合 --pack 使用）
- */
-#define FOR_VERSION "--fv"
-
-/*!
- * 解析所有预编写好的文本，并全部安装
- */
-#define PRE_TEXT "-pre"
 
 /*!
  * 获取当前版本号
@@ -59,17 +58,93 @@
 #define VERSION         "-v"
 #define VERSION_NUMBER  "1.0"
 
+/**
+ * 默认执行
+ */
+#define DEFAULT_EXEC    "-default"
+
 std::string __empty__[] = {};
 
 typedef int          __argc__;
 typedef std::string* __argv__;
+typedef unsigned long filesize;
+
+/**
+ * 环境安装包
+ */
+struct package
+{
+    std::string filename;
+    std::string version;
+};
+
+struct file
+{
+    std::string filename;
+    filesize    size;
+};
+
+void load_local_package()
+{
+    std::string path;
+#ifdef WIN32
+    TCHAR _path[MAX_PATH + 1] = {0};
+    GetModuleFileName(NULL, _path, MAX_PATH);
+    path = _path;
+#endif
+
+    int index = 0;
+#ifdef WIN32
+    index = path.rfind('\\');
+#endif
+
+    std::string directory = path.substr(0, index);
+
+#ifdef WIN32
+    long handle; // 句柄
+    struct _finddata_t fileinfo;
+
+    // 第一次查找
+    handle = _findfirst(directory.c_str(), &fileinfo);
+    if(handle == -1)
+        return;
+
+    do
+    {
+        std::cout << fileinfo.name << std::endl;
+    } while (!_findnext(handle, &fileinfo));
+
+    _findclose(handle);
+
+#endif
+
+}
+
+/**
+ * 默认执行
+ */
+void default_exec(__argc__ argc, __argv__ argv)
+{
+    load_local_package();
+
+    for(int i = 0; i < argc; i++)
+    {
+        if(strstr(argv[i].c_str(), "="))
+        {
+
+        } else
+        {
+
+        }
+    }
+}
 
 /**
  * 根据版本号选择安装
  */
-void package_for_version(__argc__, __argv__)
+void package_for_version(__argc__ argc, __argv__ argv)
 {
-
+    default_exec(argc, argv);
 }
 
 /**

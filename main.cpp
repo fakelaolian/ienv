@@ -23,25 +23,17 @@
  */
 #include "commands.h"
 
-#include <map>
-#include <iostream>
-#include <cstring>
 #include <sstream>
 #include <vector>
-#include <utility>
+
+/**
+ * 最新版本
+ */
+#define HIGHEST "highest"
 
 typedef void (*__function__)(__argc__, __argv__);
 
 using namespace std;
-
-/**
- * 环境安装包
- */
-struct env
-{
-    string file;
-    string version;
-};
 
 static map<string, __function__> commands;
 
@@ -67,7 +59,7 @@ void parse_command(string item, string& command, __argc__& argc, __argv__& argv)
 /**
  * 字符串分割
  */
-string* split(const string& value, char flag, int& size);
+void split(const string& value, char flag, __argc__& argc, __argv__& argv);
 
 int main(int argc, char **argv)
 {
@@ -100,6 +92,7 @@ int main(int argc, char **argv)
 void init_commands_function()
 {
     commands.insert(pair<string, __function__>(VERSION, version));
+    commands.insert(pair<string, __function__>(DEFAULT_EXEC, default_exec));
     commands.insert(pair<string, __function__>(PACKAGE, package_for_version));
 }
 
@@ -110,11 +103,11 @@ bool start_with(string src, string val)
 
 void parse_command(string item, string& command, __argc__& argc, __argv__& argv)
 {
-    if(start_with(item, "-"))
+    if (start_with(item, "-"))
     {
-        if(start_with(item, "--"))
+        if (start_with(item, "--"))
         {
-            if(strstr(item.c_str(), "="))
+            if (strstr(item.c_str(), "="))
             {
                 int find_index = item.find('=');
                 command = item.substr(0, find_index);
@@ -122,23 +115,23 @@ void parse_command(string item, string& command, __argc__& argc, __argv__& argv)
                 string value;
                 value = item.substr(find_index + 1, item.size());
 
-                argv = split(value, ';', argc);
+                split(value, ';', argc, argv);
                 return;
-            }else
+            } else
             {
-                goto defend;
+                command = item;
+                argc = 0;
+                argv = __empty__;
             }
-            return;
         }
-
-defend:
-        command   = item;
-        argc      = 0;
-        argv      = __empty__;
+    } else
+    {
+        command = DEFAULT_EXEC;
+        split(item, ';', argc, argv);
     }
 }
 
-string* split(const string& value, char flag, int& size)
+void split(const string& value, char flag, __argc__& argc, __argv__& argv)
 {
     string temp;
     vector<string> vec;
@@ -149,6 +142,6 @@ string* split(const string& value, char flag, int& size)
         vec.push_back(temp);
     }
 
-    size = vec.size();
-    return vec.data();
+    argc = vec.size();
+    argv = vec.data();
 }
