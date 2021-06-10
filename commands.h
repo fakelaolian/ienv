@@ -28,8 +28,10 @@
 #include <string>
 #include <iostream>
 #include <map>
-#include <stdio.h>
+#include <utility>
+#include <cstdio>
 #include <io.h>
+#include <vector>
 
 #ifdef WIN32
 #   include <windows.h>
@@ -69,6 +71,13 @@ typedef int          __argc__;
 typedef std::string* __argv__;
 typedef unsigned long filesize;
 
+struct fileinfo_t;
+
+/**
+ * 遍历所有文件
+ */
+std::vector<fileinfo_t> each_files(const std::string& path);
+
 /**
  * 环境安装包
  */
@@ -78,46 +87,102 @@ struct package
     std::string version;
 };
 
-struct file
+struct fileinfo_t
 {
     std::string filename;
     filesize    size;
+    unsigned    attrib;
+    std::string asb_path;
+    fileinfo_t(std::string _filename_, filesize _size_, unsigned _attrib_)
+        : filename(std::move(_filename_)), size(_size_), attrib(_attrib_)
+    {
+    }
 };
 
-void load_local_package()
+/**
+ * 安装包文件
+ */
+struct packfile_t
 {
-    std::string path;
-#ifdef WIN32
-    TCHAR _path[MAX_PATH + 1] = {0};
-    GetModuleFileName(NULL, _path, MAX_PATH);
-    path = _path;
-#endif
+private:
+    std::vector<fileinfo_t> subdir_list;
 
-    int index = 0;
-#ifdef WIN32
-    index = path.rfind('\\');
-#endif
+public:
+    std::string filename;
+    filesize    size;
+    packfile_t(std::string name, filesize _size) : filename(std::move(name)), size(_size)
+    {
 
-    std::string directory = path.substr(0, index);
+    }
 
+    /**
+     * @return 当前文件夹下的所有子目录
+     */
+    std::vector<fileinfo_t> subdir()
+    {
+        return this->subdir_list;
+    }
+
+};
+
+std::map<std::string, packfile_t> packages;
+
+/**
+ * 加载本地安装包并校验
+ * 符合标准的文件夹需要具备以下条件：
+ *      1. 是文件夹
+ *      2. 存在 description 描述文件
+ *
+ * @param allfiles 文件列表
+ */
+void load_local_packages(const std::vector<fileinfo_t>& allfiles)
+{
+    std::vector<packfile_t> packfiles;
+    for(auto& item : allfiles)
+    {
+        // 是文件夹
+        if(item.attrib != _A_SUBDIR)
+            continue;
+
+        // 存在 description 描述文件
+
+    }
+}
+
+std::vector<fileinfo_t> each_files(std::string& path)
+{
+    path.append("\\*");
+    std::vector<fileinfo_t> subdir;
 #ifdef WIN32
     long handle; // 句柄
-    struct _finddata_t fileinfo;
+    struct _finddata_t fileinfo {};
 
     // 第一次查找
-    handle = _findfirst(directory.c_str(), &fileinfo);
+    handle = _findfirst(path.c_str(), &fileinfo);
     if(handle == -1)
-        return;
+        goto end;
 
     do
     {
-        std::cout << fileinfo.name << std::endl;
+        std::string name;
+        name = fileinfo.name;
+
+        //
+        // 忽略 . 和 .. 文件夹, 如果文件不是文件夹那么就忽略掉
+        //
+        if(name == "." || name =="..")
+            continue;
+
+        fileinfo_t file(fileinfo.name, fileinfo.size, fileinfo.attrib);
+        subdir.push_back(file);
     } while (!_findnext(handle, &fileinfo));
 
     _findclose(handle);
 
 #endif
 
+end:
+    return subdir;
 }
 
 /**
@@ -125,7 +190,19 @@ void load_local_package()
  */
 void default_exec(__argc__ argc, __argv__ argv)
 {
-    load_local_package();
+
+    std::string current_directory;
+
+    char _path_[MAX_PATH];
+    getcwd(_path_, MAX_PATH); // 获取当前程序所在目录
+
+    current_directory = _path_;
+    current_directory = current_directory.substr(0, current_directory.rfind('/'));
+
+    std::vector<fileinfo_t> files = each_files(current_directory);
+
+    // 加载本地安装包
+    load_local_packages(files);
 
     for(int i = 0; i < argc; i++)
     {
