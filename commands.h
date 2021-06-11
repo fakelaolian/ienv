@@ -67,7 +67,7 @@
 /**
  * 默认执行
  */
-#define DEFAULT_EXEC    "-default"
+#define DEFAULT_EXEC    "-exec"
 
 std::string __empty__[] = {};
 typedef unsigned long filesize;
@@ -127,7 +127,23 @@ public:
 
 };
 
-std::map<std::string, packfile_t> packages;
+/**
+ * 安装描述文件
+ */
+struct description_t
+{
+    std::string zipfile;
+    std::string version;
+};
+
+static std::map<std::string, packfile_t> packages;
+
+/**
+ * 描述文件Map索引
+ * 第一个Map Key 为包名称，例如：Java
+ * 第二个Map Key 为版本号，例如：1.8
+ */
+static std::map<std::string, std::map<std::string, description_t>> descriptions;
 
 /**
  * 解析描述文件
@@ -155,6 +171,7 @@ void load_local_packages(const std::vector<fileinfo_t>& allfiles)
 	    std::vector<fileinfo_t> files = each_files(item.absolute);
 	    for(auto& item : files)
 	    {
+            std::cout << "filename: " << item.filename << std::endl;
 	        if(item.filename == "description")
             {
 	            parse_description(item.absolute);
@@ -206,7 +223,7 @@ end:
 /**
  * 默认执行
  */
-void default_exec(__argc__ argc, __argv__ argv)
+void exec(__argc__ argc, __argv__ argv)
 {
     char _path_[MAX_PATH];
     std::string current_directory;
@@ -228,7 +245,7 @@ void default_exec(__argc__ argc, __argv__ argv)
  */
 void package_for_version(__argc__ argc, __argv__ argv)
 {
-    default_exec(argc, argv);
+    exec(argc, argv);
 }
 
 /**
@@ -244,10 +261,11 @@ void version(__argc__, __argv__)
 //
 void parse_description(const std::string& description_path)
 {
+    std::cout << "description file path: " << description_path << std::endl;
     std::ifstream file(description_path);
     if(file.is_open())
     {
-        std::cout << "Cannot open description file: " << description_path << std::endl;
+       std::cout << "Cannot open description file: " << description_path << std::endl;
         return;
     }
 

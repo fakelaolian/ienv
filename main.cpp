@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 void init_commands_function()
 {
     commands.insert(pair<string, __function__>(VERSION, version));
-    commands.insert(pair<string, __function__>(DEFAULT_EXEC, default_exec));
+    commands.insert(pair<string, __function__>(DEFAULT_EXEC, exec));
     commands.insert(pair<string, __function__>(PACKAGE, package_for_version));
 }
 
