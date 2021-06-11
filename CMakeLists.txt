@@ -3,4 +3,4 @@ project(ienv)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(ienv main.cpp)
+add_executable(ienv main.cpp strutils.h)

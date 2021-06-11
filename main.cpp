@@ -96,11 +96,6 @@ void init_commands_function()
     commands.insert(pair<string, __function__>(PACKAGE, package_for_version));
 }
 
-bool start_with(string src, string val)
-{
-    return !src.compare(0, val.size(), val);
-}
-
 void parse_command(string item, string& command, __argc__& argc, __argv__& argv)
 {
     if (start_with(item, "-"))
@@ -129,19 +124,4 @@ void parse_command(string item, string& command, __argc__& argc, __argv__& argv)
         command = DEFAULT_EXEC;
         split(item, ';', argc, argv);
     }
-}
-
-void split(const string& value, char flag, __argc__& argc, __argv__& argv)
-{
-    string temp;
-    vector<string> vec;
-    istringstream iss(value);
-
-    while(getline(iss, temp, flag))
-    {
-        vec.push_back(temp);
-    }
-
-    argc = vec.size();
-    argv = vec.data();
 }

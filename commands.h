@@ -32,6 +32,10 @@
 #include <cstdio>
 #include <io.h>
 #include <vector>
+#include <fstream>
+#include <sstream>
+
+#include "strutils.h"
 
 #ifdef WIN32
 #   include <windows.h>
@@ -66,9 +70,6 @@
 #define DEFAULT_EXEC    "-default"
 
 std::string __empty__[] = {};
-
-typedef int          __argc__;
-typedef std::string* __argv__;
 typedef unsigned long filesize;
 
 struct fileinfo_t;
@@ -76,7 +77,7 @@ struct fileinfo_t;
 /**
  * 遍历所有文件
  */
-std::vector<fileinfo_t> each_files(const std::string& path);
+std::vector<fileinfo_t> each_files(std::string path);
 
 /**
  * 环境安装包
@@ -92,9 +93,10 @@ struct fileinfo_t
     std::string filename;
     filesize    size;
     unsigned    attrib;
-    std::string asb_path;
-    fileinfo_t(std::string _filename_, filesize _size_, unsigned _attrib_)
-        : filename(std::move(_filename_)), size(_size_), attrib(_attrib_)
+    std::string absolute;
+
+    fileinfo_t(std::string _filename_, filesize _size_, unsigned _attrib_, std::string _absolute_)
+        : filename(std::move(_filename_)), size(_size_), attrib(_attrib_), absolute(_absolute_)
     {
     }
 };
@@ -128,6 +130,11 @@ public:
 std::map<std::string, packfile_t> packages;
 
 /**
+ * 解析描述文件
+ */
+void parse_description(const std::string& description_path);
+
+/**
  * 加载本地安装包并校验
  * 符合标准的文件夹需要具备以下条件：
  *      1. 是文件夹
@@ -145,12 +152,20 @@ void load_local_packages(const std::vector<fileinfo_t>& allfiles)
             continue;
 
         // 存在 description 描述文件
-
+	    std::vector<fileinfo_t> files = each_files(item.absolute);
+	    for(auto& item : files)
+	    {
+	        if(item.filename == "description")
+            {
+	            parse_description(item.absolute);
+            }
+	    }
     }
 }
 
-std::vector<fileinfo_t> each_files(std::string& path)
+std::vector<fileinfo_t> each_files(std::string path)
 {
+    std::string directory(path);
     path.append("\\*");
     std::vector<fileinfo_t> subdir;
 #ifdef WIN32
@@ -173,8 +188,11 @@ std::vector<fileinfo_t> each_files(std::string& path)
         if(name == "." || name =="..")
             continue;
 
-        fileinfo_t file(fileinfo.name, fileinfo.size, fileinfo.attrib);
+
+        fileinfo_t file(fileinfo.name,fileinfo.size,
+                        fileinfo.attrib,(directory + "\\" + fileinfo.name));
         subdir.push_back(file);
+
     } while (!_findnext(handle, &fileinfo));
 
     _findclose(handle);
@@ -190,11 +208,11 @@ end:
  */
 void default_exec(__argc__ argc, __argv__ argv)
 {
-
+    char _path_[MAX_PATH];
     std::string current_directory;
 
-    char _path_[MAX_PATH];
-    getcwd(_path_, MAX_PATH); // 获取当前程序所在目录
+    // 获取当前程序所在目录
+    getcwd(_path_, MAX_PATH);
 
     current_directory = _path_;
     current_directory = current_directory.substr(0, current_directory.rfind('/'));
@@ -203,17 +221,6 @@ void default_exec(__argc__ argc, __argv__ argv)
 
     // 加载本地安装包
     load_local_packages(files);
-
-    for(int i = 0; i < argc; i++)
-    {
-        if(strstr(argv[i].c_str(), "="))
-        {
-
-        } else
-        {
-
-        }
-    }
 }
 
 /**
@@ -230,4 +237,27 @@ void package_for_version(__argc__ argc, __argv__ argv)
 void version(__argc__, __argv__)
 {
     printf("current version: %s\n", VERSION_NUMBER);
+}
+
+//
+// 解析包描述文件, 并构建索引信息。
+//
+void parse_description(const std::string& description_path)
+{
+    std::ifstream file(description_path);
+    if(file.is_open())
+    {
+        std::cout << "Cannot open description file: " << description_path << std::endl;
+        return;
+    }
+
+    std::string temp;
+    while(std::getline(file, temp))
+    {
+        if(start_with(temp, "#"))
+        {
+
+        }
+    }
+
 }
